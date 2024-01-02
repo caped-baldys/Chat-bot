@@ -1,39 +1,29 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from flask import Flask , render_template , request
-
+import requests
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('chat.html')
 
-@app.route('/chat', methods=["POST","GET"])
+@app.route('/get', methods=["POST","GET"])
 def chat():
-    text = request.form['msg']
-    response = get_response(text)
-
-    return render_template('index.html')
+    text = request.form["msg"]
+    return get_response(text)
 
 
 def get_response(text):
 
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-medium")
-    model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-medium")
+    API_TOKEN = "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"
+    API_URL = "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium"
+    headers = {"Authorization": f"Bearer {API_TOKEN}"}
 
-
-    # encode the new user input, add the eos_token and return a tensor in Pytorch
-    new_user_input_ids = tokenizer.encode(text + tokenizer.eos_token, return_tensors='pt')
-
-    # append the new user input tokens to the chat history
-    bot_input_ids = torch.cat([chat_history_ids, new_user_input_ids], dim=-1) if step > 0 else new_user_input_ids
-
-    # generated a response while limiting the total chat history to 1000 tokens, 
-    chat_history_ids = model.generate(bot_input_ids, max_length=1000, pad_token_id=tokenizer.eos_token_id)
-
-    # pretty print last ouput tokens from bot
-    return (tokenizer.decode(chat_history_ids[:, bot_input_ids.shape[-1]:][0], skip_special_tokens=True))
+    response = requests.post(API_URL, headers=headers, json=text)
+    return response["generated_text"]
+        
 
 
 
